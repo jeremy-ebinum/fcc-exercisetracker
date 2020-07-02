@@ -83,7 +83,50 @@ app.post("/api/exercise/add", async (req, res, next) => {
     };
     user.log.push(newExercise);
     await user.save();
-    res.json({ username: user.username, _id: user._id, ...newExercise });
+    res.json({
+      ...newExercise,
+      username: user.username,
+      _id: user._id,
+    });
+  } catch (e) {
+    next(e);
+  }
+});
+
+const isValidDate = (d) => {
+  return d instanceof Date && Number.isFinite(d.getTime());
+};
+
+app.get("/api/exercise/log", async (req, res, next) => {
+  const { userId, from, to, limit } = req.query;
+
+  try {
+    const user = await User.findById(userId);
+    const logs = [...user.log];
+    let filteredLogs = logs;
+
+    if (isValidDate(new Date(from)) && isValidDate(new Date(to))) {
+      filteredLogs = filteredLogs.filter((log) => {
+        const date = new Date(log.date).setHours(0, 0, 0, 0);
+        return (
+          date >= new Date(from).setHours(0, 0, 0, 0) &&
+          date <= new Date(to).setHours(0, 0, 0, 0)
+        );
+      });
+    }
+
+    if (Number.isFinite(Number.parseInt(limit, 10))) {
+      filteredLogs = filteredLogs.slice(0, Number.parseInt(limit, 10));
+    }
+
+    const count = filteredLogs.length;
+
+    res.json({
+      _id: user._id,
+      username: user.username,
+      count,
+      log: filteredLogs,
+    });
   } catch (e) {
     next(e);
   }
