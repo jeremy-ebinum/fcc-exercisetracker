@@ -12,6 +12,7 @@ const { PORT, DB_URI } = process.env;
 
 const userSchema = mongoose.Schema({
   username: { type: String, required: true, minlength: 3, unique: true },
+  log: [{ description: String, duration: Number, date: String, _id: false }],
 });
 
 userSchema.plugin(uniqueValidator);
@@ -61,10 +62,31 @@ app.post("/api/exercise/new-user", async (req, res, next) => {
   }
 });
 
-app.get("/api/exercise/users", async (req, res, next) => {
-  const users = await User.find({});
+app.get("/api/exercise/users", async (req, res) => {
+  const users = await User.find({})
+    .select({ _id: 1, username: 1 })
+    .lean();
 
   res.json(users);
+});
+
+app.post("/api/exercise/add", async (req, res, next) => {
+  const { body } = req;
+
+  try {
+    const user = await User.findById(body.userId);
+
+    const newExercise = {
+      description: body.description,
+      duration: body.duration,
+      date: new Date(body.date).toDateString() || new Date().toDateString(),
+    };
+    user.log.push(newExercise);
+    await user.save();
+    res.json({ username: user.username, _id: user._id, ...newExercise });
+  } catch (e) {
+    next(e);
+  }
 });
 
 // Not found middleware
