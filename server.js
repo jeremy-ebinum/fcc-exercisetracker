@@ -78,7 +78,7 @@ app.post("/api/exercise/add", async (req, res, next) => {
 
     const newExercise = {
       description: body.description,
-      duration: body.duration,
+      duration: Number.parseInt(body.duration, 10),
       date: new Date(body.date).toDateString() || new Date().toDateString(),
     };
     user.log.push(newExercise);
