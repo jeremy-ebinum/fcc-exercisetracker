@@ -4,15 +4,25 @@ const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
 const mongoose = require("mongoose");
+const uniqueValidator = require("mongoose-unique-validator");
 
 const app = express();
 
 const { PORT, DB_URI } = process.env;
 
+const userSchema = mongoose.Schema({
+  username: { type: String, required: true, minlength: 3, unique: true },
+});
+
+userSchema.plugin(uniqueValidator);
+const User = mongoose.model("User", userSchema);
+
 mongoose
   .connect(DB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => {
     console.log("connected to MongoDB");
+
+    User.deleteMany({}).then(() => console.log("Users cleared from db"));
   })
   .catch((error) => {
     console.log("error connecting to MongoDB:", error.message);
@@ -27,17 +37,36 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
 app.use(express.static("public"));
+
 app.get("/", (req, res) => {
   res.sendFile(`${__dirname}/views/index.html`);
 });
 
+app.post("/api/exercise/new-user", async (req, res, next) => {
+  const { username } = req.body;
+
+  try {
+    const user = new User({ username });
+    const savedUser = await user.save();
+    res.json({ _id: savedUser._id, username: savedUser.username });
+  } catch (e) {
+    next(e);
+  }
+
+  next();
+});
+
 // Not found middleware
 app.use((req, res, next) => {
-  return next({ status: 404, message: "not found" });
+  res.sendStatus(404);
+
+  next();
 });
 
 // Error Handling middleware
-app.use((err, req, res) => {
+app.use((err, req, res, next) => {
+  if (!err) next();
+
   let errCode;
   let errMessage;
 
