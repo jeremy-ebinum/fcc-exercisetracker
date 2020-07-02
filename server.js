@@ -15,6 +15,13 @@ const userSchema = mongoose.Schema({
 });
 
 userSchema.plugin(uniqueValidator);
+
+userSchema.set("toJSON", {
+  transform: (document, returnedObject) => {
+    delete returnedObject.__v;
+  },
+});
+
 const User = mongoose.model("User", userSchema);
 
 mongoose
@@ -52,8 +59,12 @@ app.post("/api/exercise/new-user", async (req, res, next) => {
   } catch (e) {
     next(e);
   }
+});
 
-  next();
+app.get("/api/exercise/users", async (req, res, next) => {
+  const users = await User.find({});
+
+  res.json(users);
 });
 
 // Not found middleware
